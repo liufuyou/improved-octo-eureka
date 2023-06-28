@@ -1,0 +1,55 @@
+on:
+  schedule:
+    - cron: '0 */12 * * *'
+
+jobs:
+  check_release:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Check for release updates
+      id: check_release_updates
+      run: |
+        latest_tag=$(curl -s https://api.github.com/repos/EhViewer-NekoInverter/EhViewer/releases/latest | jq -r '.tag_name')
+        last_tag=$(cat .last_tag)
+        
+        if [[ "$latest_tag" != "$last_tag" ]]; then
+          echo "New release found. Updating README.md..."
+          
+          # 替换 README.md 中的文本内容
+          sed -i 's/OLD_TEXT/NEW_TEXT/g' README.md
+          
+          # 提交修改到 Git
+          git add README.md
+          git commit -m "Update README.md with new release information"
+          
+          # 推送到远程仓库
+          git push origin master
+          
+          # 更新记录的标签
+          echo "$latest_tag" > .last_tag
+          
+          # 设置输出，表示有更新
+          echo "::set-output name=changed_release::true"
+        else
+          echo "No release updates found."
+          # 设置输出，表示没有更新
+          echo "::set-output name=changed_release::false"
+        fi
+
+    - name: Update README.md
+      if: steps.check_release_updates.outputs.changed_release == 'true'
+      run: |
+        echo "Updating README.md with release information..."
+        
+        # 替换 README.md 中的文本内容
+        sed -i 's/OLD_TEXT/NEW_TEXT/g' README.md
+        
+        # 提交修改到 Git
+        git add README.md
+        git commit -m "Update README.md with release information"
+        
+        # 推送到远程仓库
+        git push origin master
