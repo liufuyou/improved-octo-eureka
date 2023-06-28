@@ -24,4 +24,4 @@ jobs:
       
       - name: Run script to check releases
         run: |
-          python script.py  # 替换为你的脚本文件名
+          python bl.py  # 替换为你的脚本文件名
