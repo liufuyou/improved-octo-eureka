@@ -40,32 +40,31 @@ jobs:
             
         get_latest_release("Ehviewer-Overhauled/Ehviewer")
         EOF
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Update README
       run: |
         python - <<EOF
-        import os
-
         def update_readme(latest_release, release_notes):
-            readme_file = os.path.join(os.environ["GITHUB_WORKSPACE"], "README.md")
+            readme_template_file = "README_TEMPLATE.md"  # 替换为包含占位符的 README 模板文件路径
+            readme_output_file = "README.md"  # 替换为生成的 README 文件路径
             
-            with open(readme_file, "r") as file:
-                readme_content = file.read()
+            with open(readme_template_file, "r") as template_file:
+                template_content = template_file.read()
             
             # 更新版本号和更新内容
-            new_content = readme_content.replace("{{latest_release}}", latest_release)
+            new_content = template_content.replace("{{latest_release}}", latest_release)
             new_content = new_content.replace("{{release_notes}}", release_notes)
             
-            with open(readme_file, "w") as file:
-                file.write(new_content)
-
-        latest_release = os.environ["latest_release"]
-        release_notes = os.environ["release_notes"]
+            with open(readme_output_file, "w") as output_file:
+                output_file.write(new_content)
+        
+        latest_release = "${{ steps.latest_release.outputs.stdout }}"
+        release_notes = "${{ steps.latest_release.outputs.stderr }}"
         update_readme(latest_release, release_notes)
         EOF
-      env:
-        latest_release: ${{ steps.latest_release.outputs.stdout }}
-        release_notes: ${{ steps.latest_release.outputs.stderr }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload README artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: updated-readme
+        path: README.md
