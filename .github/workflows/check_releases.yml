@@ -1,27 +1,71 @@
-name: Check GitHub Releases
+name: Update README
+
 on:
   push:
     branches:
-      - main  # 替换为你的主要分支名称
+      - main
 
 jobs:
-  check_releases:
+  update-readme:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-      
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.x
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
-      
-      - name: Run script to check releases
-        run: |
-          python bl.py  # 替换为你的脚本文件名
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.x
+
+    - name: Install dependencies
+      run: pip install requests
+
+    - name: Get latest release
+      id: latest_release
+      run: |
+        python - <<EOF
+        import requests
+
+        def get_latest_release(repo):
+            url = f"https://api.github.com/repos/{repo}/releases/latest"
+            response = requests.get(url)
+            
+            if response.status_code == 200:
+                release_info = response.json()
+                tag_name = release_info["tag_name"]
+                release_notes = release_info["body"]
+                print(tag_name)
+                print(release_notes)
+            
+        get_latest_release("Ehviewer-Overhauled/Ehviewer")
+        EOF
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Update README
+      run: |
+        python - <<EOF
+        import os
+
+        def update_readme(latest_release, release_notes):
+            readme_file = os.path.join(os.environ["GITHUB_WORKSPACE"], "README.md")
+            
+            with open(readme_file, "r") as file:
+                readme_content = file.read()
+            
+            # 更新版本号和更新内容
+            new_content = readme_content.replace("{{latest_release}}", latest_release)
+            new_content = new_content.replace("{{release_notes}}", release_notes)
+            
+            with open(readme_file, "w") as file:
+                file.write(new_content)
+
+        latest_release = os.environ["latest_release"]
+        release_notes = os.environ["release_notes"]
+        update_readme(latest_release, release_notes)
+        EOF
+      env:
+        latest_release: ${{ steps.latest_release.outputs.stdout }}
+        release_notes: ${{ steps.latest_release.outputs.stderr }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
