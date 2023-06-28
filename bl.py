@@ -13,7 +13,7 @@ def get_latest_release(repo):
     return None, None
 
 def update_readme(repo_name, latest_release, release_notes):
-    readme_file = "README.md"  # 替换为你的 README.md 文件路径
+    readme_file = "https://github.com/liufuyou/improved-octo-eureka/blob/main/README.md"  # 替换为你的 README.md 文件路径
     
     with open(readme_file, "r") as file:
         readme_content = file.read()
