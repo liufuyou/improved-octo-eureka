@@ -1,61 +1,55 @@
-name: Update README
-
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: '0 */12 * * *'
 
 jobs:
-  update-readme:
+  check_release:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.x
-
-    - name: Install dependencies
-      run: pip install requests
-
-    - name: Get latest release
-      id: latest_release
+    - name: Check for release updates
+      id: check_release_updates
       run: |
-        python - <<EOF
-        import requests
-
-        def get_latest_release(repo):
-            url = f"https://api.github.com/repos/{repo}/releases/latest"
-            response = requests.get(url)
-            
-            if response.status_code == 200:
-                release_info = response.json()
-                tag_name = release_info["tag_name"]
-                release_notes = release_info["body"]
-                print(tag_name)
-                print(release_notes)
-            
-        get_latest_release("Ehviewer-Overhauled/Ehviewer")
-        EOF
-
-    - name: Update README
-      run: |
-        python - <<EOF
-        def update_readme(latest_release, release_notes):
-            readme_content = f"Latest Release: {latest_release}\n\nRelease Notes:\n{release_notes}"
-            with open("README.md", "w") as file:
-                file.write(readme_content)
+        latest_tag=$(curl -s https://api.github.com/repos/EhViewer-NekoInverter/EhViewer/releases/latest | jq -r '.tag_name')
+        last_tag=$(cat .last_tag)
         
-        latest_release = "${{ steps.latest_release.outputs.stdout }}"
-        release_notes = "${{ steps.latest_release.outputs.stderr }}"
-        update_readme(latest_release, release_notes)
-        EOF
+        if [[ "$latest_tag" != "$last_tag" ]]; then
+          echo "New release found. Updating README.md..."
+          
+          # 替换 README.md 中的文本内容
+          sed -i 's/OLD_TEXT/NEW_TEXT/g' README.md
+          
+          # 提交修改到 Git
+          git add README.md
+          git commit -m "Update README.md with new release information"
+          
+          # 推送到远程仓库
+          git push origin master
+          
+          # 更新记录的标签
+          echo "$latest_tag" > .last_tag
+          
+          # 设置输出，表示有更新
+          echo "::set-output name=changed_release::true"
+        else
+          echo "No release updates found."
+          # 设置输出，表示没有更新
+          echo "::set-output name=changed_release::false"
+        fi
 
-    - name: Upload README artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: updated-readme
-        path: README.md
+    - name: Update README.md
+      if: steps.check_release_updates.outputs.changed_release == 'true'
+      run: |
+        echo "Updating README.md with release information..."
+        
+        # 替换 README.md 中的文本内容
+        sed -i 's/OLD_TEXT/NEW_TEXT/g' README.md
+        
+        # 提交修改到 Git
+        git add README.md
+        git commit -m "Update README.md with release information"
+        
+        # 推送到远程仓库
+        git push origin master
